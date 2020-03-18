@@ -25,18 +25,17 @@ SRA_human_metaInfo_20200301 <-
   read_delim(here("raw_data", "SRA_human_metaInfo_20200301.tsv"),
              delim = "\t", escape_double = FALSE, trim_ws = TRUE) %>%
   mutate(body_site = case_when(
-    str_detect(KEYWORDS, "stool|feces") ~ "feces",
-    str_detect(KEYWORDS, "antecubital|fossa|skin") ~ "skin",
-    str_detect(KEYWORDS, "vaginal|vagina") ~ "vagina",
-    str_detect(KEYWORDS, "saliva|tongue") ~ "saliva",
-    str_detect(KEYWORDS, "semen|sperm") ~ "semen",
-    str_detect(KEYWORDS, "nostril|nares") ~ "nostril",
-    str_detect(KEYWORDS, "menstrual blood|menstruation") ~ "menstrual_blood",
+    str_detect(KEYWORDS, "feces|gastrointestinal tract|human-gut|intestine|colon") ~ "feces",
+    str_detect(KEYWORDS, "skin|human-skin|sebum|dermis|forearm") ~ "skin",
+    str_detect(KEYWORDS, "oral|mucosa|saliva|human-oral|tongue|dental|salivary") ~ "saliva",
     TRUE ~ NA_character_))
 
 SRA_human_metaInfo_20200301_tokens <-
   SRA_human_metaInfo_20200301 %>%
-  unnest_tokens(keyword, KEYWORDS, token = "regex", pattern=";")
+  unnest_tokens(keyword, KEYWORDS, token = "regex", pattern=";") %>%
+  filter(keyword != "human",
+         keyword != "association",
+         keyword != "human-associated")
 
 
 # random sampling to create smaller test-set
@@ -51,17 +50,22 @@ token_sample <-
   SRA_human_metaInfo_20200301_sample %>%
   unnest_tokens(keyword, KEYWORDS, token = "regex", pattern=";")
 
-# not-so-random sampling (based on body-site) to create smaller test-set
+# stratified-random sampling (based on body-site) to create smaller test-set
 
 SRA_human_metaInfo_20200301_sample_site <-
   SRA_human_metaInfo_20200301 %>%
-  filter(!is.na(body_site)) %>%
+  filter(!is.na(body_site),
+         str_count(KEYWORDS, ";") > 7) %>%
   group_by(body_site) %>%
-  sample_n(10)
+  sample_n(15)
 
 token_sample_site <-
   SRA_human_metaInfo_20200301_sample_site %>%
-  unnest_tokens(keyword, KEYWORDS, token = "regex", pattern=";")
+  ungroup() %>%
+  unnest_tokens(keyword, KEYWORDS, token = "regex", pattern=";") %>%
+  filter(keyword != "human",
+         keyword != "association",
+         keyword != "human-associated")
 
 ```
 
@@ -93,7 +97,8 @@ keyword_distance <-
 ```{r distance-matrix}
 
 dist_sample <-
-  SRA_human_metaInfo_20200301_sample %>%
+  SRA_human_metaInfo_20200301_sample_site %>%
+  ungroup() %>%
   expand(ID_first = SAMPLE_ID, ID_second = SAMPLE_ID) %>%
   filter(ID_first <= ID_second) %>%
   rowwise() %>%
@@ -120,6 +125,10 @@ clust_sample_3 <-
   pivot_longer(everything(), names_to = "SAMPLE_ID", values_to = "cluster") %>%
   left_join(SRA_human_metaInfo_20200301_tokens, by = "SAMPLE_ID")
 
+clust_sample_3 %>%
+  ggplot(aes(x = body_site, y = cluster))+
+  geom_jitter(aes(col=SAMPLE_ID))
+
 ```
 
 ```{r summarize-clusters}
@@ -134,7 +143,7 @@ head(keyword_summary, n = 10)
 
 keyword_summary %>%
   filter(n > 1) %>%
-  write_csv(here("tasks", "04_cluster_keywords_hclust", "keyword_summary_hclust.csv"))
+  write_csv(here("output", "keyword_summary_hclust.csv"))
 
 ```
 
