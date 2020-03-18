@@ -72,7 +72,9 @@ token_sample_site <-
 ```{r distance-function}
 
 keyword_distance <-
-  function(token_df, ID_1, ID_2){
+  function(ID_1, ID_2){
+    token_df <- SRA_human_metaInfo_20200301_tokens
+    
     words_1 <-
       token_df %>%
       filter(SAMPLE_ID == ID_1) %>%
@@ -91,7 +93,7 @@ keyword_distance <-
   }
 
 # usage example
-#keyword_distance(SRA_human_metaInfo_20200301_tokens, "ERS001113", "ERS1083355")
+#keyword_distance("ERS001113", "ERS1083355")
 ```
 
 ```{r distance-matrix}
@@ -102,22 +104,46 @@ dist_sample <-
   expand(ID_first = SAMPLE_ID, ID_second = SAMPLE_ID) %>%
   filter(ID_first <= ID_second) %>%
   rowwise() %>%
-  mutate(dist = keyword_distance(SRA_human_metaInfo_20200301_tokens, ID_first, ID_second)) %>%
+  mutate(dist = keyword_distance(ID_first, ID_second)) %>%
   pivot_wider(names_from = ID_first, values_from = dist) %>%
   select(-ID_second) %>%
   as.dist(diag = TRUE)
 
+
 ```
 
-```{r clustering}
+```{r levenshtein-distance-matrix}
+# also called edit distance
+
+adist("city;forehead;human;human-skin;raw;rural;skin",
+      "female;human;human-skin;skin")
+
+edit_dist <- adist(SRA_human_metaInfo_20200301_sample_site$KEYWORDS)
+  
+rownames(edit_dist) <- paste(SRA_human_metaInfo_20200301_sample_site$SAMPLE_ID,
+                             SRA_human_metaInfo_20200301_sample_site$body_site)
+colnames(edit_dist) <- paste(SRA_human_metaInfo_20200301_sample_site$SAMPLE_ID,
+                             SRA_human_metaInfo_20200301_sample_site$body_site)
+
+```
+
+
+```{r heatmaps}
+heatmap(as.matrix(dist_sample))
+
+heatmap(edit_dist)
+```
+
+
+```{r hierarchical-clustering}
 
 clust_sample <- hclust(dist_sample)
 
-plot(clust_sample); rect.hclust(clust_sample, k = 3)
+plot(clust_sample); rect.hclust(clust_sample, k = 5)
 
 clust_sample %>%
   as.dendrogram %>%
-  set("branches_k_color", k = 3) %>% 
+  set("branches_k_color", k = 5) %>% 
   plot()
 
 clust_sample_3 <-
@@ -130,6 +156,20 @@ clust_sample_3 %>%
   geom_jitter(aes(col=SAMPLE_ID))
 
 ```
+
+```{r k-medioid-clustering}
+k_clust_sample <- pam(dist_sample, k = 3)
+
+k_clust_sample$clustering
+
+summary(k_clust_sample)
+
+plot(k_clust_sample)
+
+clusplot(k_clust_sample)
+
+```
+
 
 ```{r summarize-clusters}
 
