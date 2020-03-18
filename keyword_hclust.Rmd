@@ -1,0 +1,142 @@
+---
+title: "Keyword analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE)
+
+library(tidyverse)
+library(here)
+library(tidytext)
+library(dendextend)
+
+```
+
+## Goal
+
+Cluster keywords present in SRA_human_metaInfo_20200301.tsv
+
+```{r import-data}
+
+# read data and split into tokens by ";" delimiter
+
+SRA_human_metaInfo_20200301 <-
+  read_delim(here("raw_data", "SRA_human_metaInfo_20200301.tsv"),
+             delim = "\t", escape_double = FALSE, trim_ws = TRUE) %>%
+  mutate(body_site = case_when(
+    str_detect(KEYWORDS, "stool|feces") ~ "feces",
+    str_detect(KEYWORDS, "antecubital|fossa|skin") ~ "skin",
+    str_detect(KEYWORDS, "vaginal|vagina") ~ "vagina",
+    str_detect(KEYWORDS, "saliva|tongue") ~ "saliva",
+    str_detect(KEYWORDS, "semen|sperm") ~ "semen",
+    str_detect(KEYWORDS, "nostril|nares") ~ "nostril",
+    str_detect(KEYWORDS, "menstrual blood|menstruation") ~ "menstrual_blood",
+    TRUE ~ NA_character_))
+
+SRA_human_metaInfo_20200301_tokens <-
+  SRA_human_metaInfo_20200301 %>%
+  unnest_tokens(keyword, KEYWORDS, token = "regex", pattern=";")
+
+
+# random sampling to create smaller test-set
+
+set.seed(200310)
+
+SRA_human_metaInfo_20200301_sample <-
+  SRA_human_metaInfo_20200301 %>%
+  sample_n(25)
+
+token_sample <-
+  SRA_human_metaInfo_20200301_sample %>%
+  unnest_tokens(keyword, KEYWORDS, token = "regex", pattern=";")
+
+# not-so-random sampling (based on body-site) to create smaller test-set
+
+SRA_human_metaInfo_20200301_sample_site <-
+  SRA_human_metaInfo_20200301 %>%
+  filter(!is.na(body_site)) %>%
+  group_by(body_site) %>%
+  sample_n(10)
+
+token_sample_site <-
+  SRA_human_metaInfo_20200301_sample_site %>%
+  unnest_tokens(keyword, KEYWORDS, token = "regex", pattern=";")
+
+```
+
+```{r distance-function}
+
+keyword_distance <-
+  function(token_df, ID_1, ID_2){
+    words_1 <-
+      token_df %>%
+      filter(SAMPLE_ID == ID_1) %>%
+      pull(keyword)
+    
+    words_2 <-
+      token_df %>%
+      filter(SAMPLE_ID == ID_2) %>%
+      pull(keyword)
+    
+    shared <- length(intersect(words_1, words_2))
+    unique <- length(unique(c(words_1, words_2)))
+    
+    return(1-(shared/unique))
+    
+  }
+
+# usage example
+#keyword_distance(SRA_human_metaInfo_20200301_tokens, "ERS001113", "ERS1083355")
+```
+
+```{r distance-matrix}
+
+dist_sample <-
+  SRA_human_metaInfo_20200301_sample %>%
+  expand(ID_first = SAMPLE_ID, ID_second = SAMPLE_ID) %>%
+  filter(ID_first <= ID_second) %>%
+  rowwise() %>%
+  mutate(dist = keyword_distance(SRA_human_metaInfo_20200301_tokens, ID_first, ID_second)) %>%
+  pivot_wider(names_from = ID_first, values_from = dist) %>%
+  select(-ID_second) %>%
+  as.dist(diag = TRUE)
+
+```
+
+```{r clustering}
+
+clust_sample <- hclust(dist_sample)
+
+plot(clust_sample); rect.hclust(clust_sample, k = 3)
+
+clust_sample %>%
+  as.dendrogram %>%
+  set("branches_k_color", k = 3) %>% 
+  plot()
+
+clust_sample_3 <-
+  bind_rows(cutree(clust_sample, k = 3)) %>%
+  pivot_longer(everything(), names_to = "SAMPLE_ID", values_to = "cluster") %>%
+  left_join(SRA_human_metaInfo_20200301_tokens, by = "SAMPLE_ID")
+
+```
+
+```{r summarize-clusters}
+
+keyword_summary <- 
+  clust_sample_3 %>%
+  group_by(cluster) %>%
+  count(keyword, sort = TRUE) %>%
+  arrange(cluster)
+
+head(keyword_summary, n = 10)
+
+keyword_summary %>%
+  filter(n > 1) %>%
+  write_csv(here("tasks", "04_cluster_keywords_hclust", "keyword_summary_hclust.csv"))
+
+```
+
+
+
