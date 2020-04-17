@@ -1,6 +1,11 @@
 ---
-title: "Keyword analysis"
-output: html_document
+title: "Keyword Clustering"
+subtitle: "implementing an optimisation method"
+output:
+  html_document:
+    theme: flatly
+    toc: TRUE
+    toc_float: TRUE
 ---
 
 ```{r setup, include=FALSE}
