@@ -38,7 +38,7 @@ library(patchwork)
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sschmutz/optimization-method-project-2020/master?urlpath=rstudio)
 
-*This R Markdown code can be executed on mybinder by following the link above.*
+*This R Markdown code can be executed on mybinder by following the link above (it can take a while until the binder instance is set up).*
 
 # Background
 
