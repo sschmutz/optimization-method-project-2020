@@ -1,6 +1,8 @@
 ---
 title: "Keyword Clustering"
-subtitle: "implementing an optimisation method"
+subtitle: "implementing an optimization method"
+author: Stefan Schmutz, ZHAW
+date: "April 2020"
 output:
   html_document:
     theme: flatly
@@ -33,14 +35,14 @@ library(clusteval)
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sschmutz/optimization-method-project-2020/master?urlpath=rstudio)
 
-This R Markdown code can be executed on mybinder by following the link above.
+*This R Markdown code can be executed on mybinder by following the link above.*
 
 # Background
 
 <div class = "row">
   
 <div class = "col-md-6">
-Microbial Forensics for body fluid identification is an interesting field of study. Human body sites have different patterns of microorganisms, high throughput sequencing techinqes and open data sharing (e.g. [Sequence Read Archive](https://www.ncbi.nlm.nih.gov/sra)) allow us to create models which can classify unknown sample types.  
+Microbial Forensics for body fluid identification is an interesting field of study. Human body sites have different patterns of microorganisms. High throughput sequencing techniques and open data sharing (e.g. [Sequence Read Archive](https://www.ncbi.nlm.nih.gov/sra)) allow us to create models which can classify unknown sample types.  
 In 2018, Tackmann et al. published a study where they created a Random Forest Classifier to identify body site-specific microbial biomarkers.
 </div>
   
@@ -49,16 +51,16 @@ In 2018, Tackmann et al. published a study where they created a Random Forest Cl
 </div>
 </div>
 
-Since Machine learning algorithms like these often rely on large labeled datasets. A follow-up project now aims to update the dataset and re-train the model.
+Since supervised machine learning algorithms like this often rely on large labeled datasets, a follow-up project now aims to update the dataset and re-train the model.
 
 # Aim
 In addition to the previously used approach of labeling the data by choosing appropriate keywords for each body-site, an experimental approach was done in parallel.  
-The idea is to cluster samples of the same body-sites by analizing their pairwise distance of keywords provided with the data. This report should evaluate if it's possible to do this by using a hierarchical clustering approach.
+The idea is to cluster samples of the same body-sites by analyzing their pairwise distance of keywords provided with the data. This report should evaluate if it's possible to do this by using a hierarchical clustering approach.
 
 # Analysis
 ## Data
 
-A labeled subset consisting of samples originating from feces (n=15), saliva (n=15) and skin (n=8) was selected to perform the proof of concept analysis.
+A manually labeled subset consisting of samples originating from feces (n=15), saliva (n=15) and skin (n=8) was selected to perform the proof of concept analysis.
 
 Data structure:
 
@@ -119,7 +121,7 @@ $1-\frac{\#\ shared\ Keywords}{\#\ total\ unique\ Keywords}$
 
 Samples which share many keywords therefore have a low-, while samples with no identical keywords a high-pairwise distance value (on a scale from 0 to 1).
 
-Structure of distance matrix:
+Structure of distance matrix (diagonal not shown):
 ```{r distance-matrix}
 
 # this function takes two SAMPLE_IDs and returns the pairwise distance
@@ -169,7 +171,7 @@ In order to cluster the samples, a direction has to be defined.
 There are two options, either we start with all samples in one large cluster (top-down) or each sample is its own cluster (bottom-up).  
 In this work, a bottom-up (agglomerative) approach was chosen.  
 
-The Clustering is then done in a greedy manner. This means that at each step the local optimal choice is followed which results in a time complexity of $\mathcal{O}(n^3)$.  
+The Clustering is then done in a greedy manner. This means that at each step the local optimal choice is followed, which results in a time complexity of $\mathcal{O}(n^3)$.  
 It would become an even more time-costly algorithm $\mathcal{O}(2^n)$ otherwise.  
 This means we usually have to be satisfied with only finding a local optimum.
 
@@ -188,7 +190,7 @@ Source: Mhbrugman
 Once the distance metric and type of clustering has been chosen, a linkage criteria has to be selected.  
 The Linkage criteria determines the distance of two clusters. There are multiple options to choose from and they can potentially influence the outcome.  
 Depending on the type of data at hand, a different criteria might be suitable.  
-Some of the criterias are shown below.
+Some of the options are shown below.
 
 <br/><br/>
 
@@ -217,7 +219,7 @@ Using the four different linkage criteria described above, dendrograms can be us
 Since in this case it's known that we should get three clusters, the desired number of groups (k=3) was specified.  
 
 To compare the performance of the different clustering methods, the Rand index was calculated for each compared to the known classes.  
-The Rand index (value between 0 and 1) describes how similar two clusterings are, 1 beeing the exact same.
+The Rand index (value between 0 and 1) describes how similar two clusterings are, 1 being the exact same.
 
 ```{r hierarchical-clustering}
 
@@ -324,11 +326,15 @@ UPGMA <-
 ```
 
 
-
-
 ## Discussion
 
+Given a subset of samples where the class has been labeled manually, the presented method was able to distinguish reliable between those classes.  
+One exception was the clustering using the single-linkage criteria, the solely method where the Rand-index was below one and the classification of the groups failed. While the performance of the other three tested linkage criteria were very similar.
 
+A major drawback of this approach however lies not necessarily in the method, but the quality of the keywords. It's very important to have unambiguous labels which is unfortunately not always the case. Even trying to classify the samples by keywords manually is sometimes not possible and further information about the sample source (from e.g. the [BioSample](https://www.ncbi.nlm.nih.gov/biosample) database) has to be gathered.  
+Another caveat is the time complexity. The creation of the pairwise distance matrix and the hierarchical clustering are very time intensive especially when intending to apply this method to many samples.  
+
+When applied to a small subset of samples, this method could still provide with insights in the data structure and possibly provide information about prevalent/important keywords which were missed by using the conventional approach.
 
 
 
