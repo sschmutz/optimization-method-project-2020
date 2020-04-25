@@ -1,1 +1,1 @@
-install.packages(c("tidyverse", "here", "tidytext", "dendextend"))
+install.packages(c("readr", "dplyr", "tidytext", "tidyr", "purrr", "usedist", "clusteval","dendextend", "ggplot2", "patchwork"))

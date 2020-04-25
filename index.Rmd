@@ -14,22 +14,25 @@ output:
 ```{r setup, include=FALSE}
 
 knitr::opts_chunk$set(message = FALSE)
+
 ```
 
 ```{r load-packages, message=FALSE}
 
 # load required packages
-# install them, if not already present, with the following command:
-# install.packages(c("tidyverse", "tidytext", "dendextend", "cluster")) TODO update this line
+# install them from CRAN, if not already present, with the following command (just uncomment the next line):
+#install.packages(c("readr", "dplyr", "tidytext", "tidyr", "purrr", "usedist", "clusteval","dendextend", "ggplot2", "patchwork"))
 
-library(tidyverse)
+library(readr)
+library(dplyr)
 library(tidytext)
-library(dendextend)
-library(cluster)
+library(tidyr)
+library(purrr)
 library(usedist)
-library(patchwork)
-library(ggdendro)
 library(clusteval)
+library(dendextend)
+library(ggplot2)
+library(patchwork)
 
 ```
 
