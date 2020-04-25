@@ -15,18 +15,19 @@ knitr::opts_chunk$set(message = FALSE)
 
 # load required packages
 # install them, if not already present, with the following command:
-# install.packages(c("tidyverse", "tidytext", "dendextend", "cluster"))
+# install.packages(c("tidyverse", "tidytext", "dendextend", "cluster")) TODO update this line
 
 library(tidyverse)
 library(tidytext)
 library(dendextend)
 library(cluster)
 library(usedist)
+library(patchwork)
 ```
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sschmutz/optimization-method-project-2020/master?urlpath=rstudio)
 
-This R Markdown code can be executed on mybinder by following the link above, the project can be found on GitHub ([sschmutz/optimization-method-project-2020](https://github.com/sschmutz/optimization-method-project-2020)).
+This R Markdown code can be executed on mybinder by following the link above.
 
 # Background
 
@@ -110,7 +111,7 @@ For this work, a different distance metric was chosen:
 
 $1-\frac{\#\ shared\ Keywords}{\#\ total\ unique\ Keywords}$
 
-Samples which share many keywords therefore have a low- while samples with no identical keywords a high-pairwise distance value (on a scale from 0 to 1).
+Samples which share many keywords therefore have a low-, while samples with no identical keywords a high-pairwise distance value (on a scale from 0 to 1).
 
 Structure of distance matrix:
 ```{r distance-matrix}
@@ -147,38 +148,106 @@ SRA_meta_dist <-
   select(-ID_second) %>%
   as.dist(diag = TRUE)
 
-# print the first 6 entries to show the structure of the distance matrix
-dist_subset(SRA_meta_dist, c("SRS483186", "ERS237394", "ERS1743608", "ERS1232209", "ERS614262", "ERS1031177"))
+# print the first 4 entries to show the structure of the distance matrix
+dist_subset(SRA_meta_dist, c("SRS483186", "ERS237394", "ERS1743608",
+                             "ERS1232209", "ERS614262", "ERS1031177"))
 
 ```
+
+### Type of clustering
+
+<div class = "row">
+  
+<div class = "col-md-6">
+In order to cluster the samples, a direction has to be defined.  
+There are two options, either we start with all samples in one large cluster (top-down) or each sample is its own cluster (bottom-up).  
+In this work, a bottom-up (agglomerative) approach was chosen.  
+
+The Clustering is then done in a greedy manner. This means that at each step the local optimal choice is followed which results in a time complexity of $\mathcal{O}(n^3)$.  
+It would become an even more time-costly algorithm $\mathcal{O}(2^n)$ otherwise.  
+This means we usually have to be satisfied with only finding a local optimum.
+
+An example of such an agglomerative approach in a greedy manner is shown in the figure by Mhbrugman.
+</div>
+  
+<div class = "col-md-6">
+![Agglomerative clustering](figures/agglomerative.png)  
+Source: Mhbrugman  
+([wikipedia.org/wiki/Hierarchical_clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering))
+</div>
+</div>
 
 ### Linkage criteria
 
-```{r heatmap}
+Once the distance metric and type of clustering has been chosen, a linkage criteria has to be selected.  
+The Linkage criteria determines the distance of two clusters. There are multiple options to choose from and they can potentially influence the outcome.  
+Depending on the type of data at hand, a different criteria might be suitable.  
+Some of the criterias are shown below.
 
-heatmap(as.matrix(SRA_meta_dist))
 
-```
+<div class = "row">
+  
+<div class = "col-md-6">
+![Single-linkage](figures/SingleLinkage.png)  
+Single-linkage (minimum distance)
 
+![Average-linkage](figures/AverageLinkage.png)  
+Average-linkage, (WPGMA)
+</div>
+  
+<div class = "col-md-6">
+![Complete-linkage](figures/CompleteLinkage.png)  
+Complete-linkage (maximum distance)
+
+
+
+![Average-group-linkage](figures/AverageGroupLinkage.png)  
+Average-group-linkage, (UPGMA)
+</div>
+</div>
+
+Source: Von Sigbert  
+([wikipedia.org/wiki/Hierarchische_Clusteranalyse](https://de.wikipedia.org/wiki/Hierarchische_Clusteranalyse))
+
+## Result
 
 ```{r hierarchical-clustering}
 
-SRA_meta_clust <- hclust(SRA_meta_dist)
+SRA_meta_clust_single <- hclust(SRA_meta_dist, method = "single")
+SRA_meta_clust_complete <- hclust(SRA_meta_dist, method = "complete")
+SRA_meta_clust_WPGMA <- hclust(SRA_meta_dist, method = "mcquitty")
+SRA_meta_clust_UPGMA <- hclust(SRA_meta_dist, method = "average")
 
-SRA_meta_clust %>%
+single <-
+  SRA_meta_clust_single %>%
   as.dendrogram %>%
-  set("branches_k_color", k = 3) %>% 
-  plot()
+  set("branches_k_color", k = 3)
+
+complete <-
+  SRA_meta_clust_complete %>%
+  as.dendrogram %>%
+  set("branches_k_color", k = 3)
+
+WPGMA <-
+  SRA_meta_clust_WPGMA %>%
+  as.dendrogram %>%
+  set("branches_k_color", k = 3)
+
+UPGMA <-
+  SRA_meta_clust_UPGMA %>%
+  as.dendrogram %>%
+  set("branches_k_color", k = 3)
+
+
+plot(single)
+plot(complete)
+plot(WPGMA)
+plot(UPGMA)
 
 SRA_meta_clust_3 <-
-  bind_rows(cutree(SRA_meta_clust, k = 3)) %>%
+  bind_rows(cutree(SRA_meta_clust_single, k = 3)) %>%
   pivot_longer(everything(), names_to = "SAMPLE_ID", values_to = "cluster") %>%
   left_join(SRA_meta_tokens, by = "SAMPLE_ID")
-
-SRA_meta_clust_3 %>%
-  ggplot(aes(x = CLASS, y = cluster))+
-  geom_jitter() +
-  labs(x = NULL)
 
 ```
 
