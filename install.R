@@ -1,1 +1,1 @@
-install.packages(c("readr", "dplyr", "tidytext", "tidyr", "purrr", "usedist", "clusteval","dendextend", "ggplot2", "patchwork"))
+install.packages(c("knitr", "readr", "dplyr", "tidytext", "tidyr", "purrr", "usedist", "clusteval","dendextend", "ggplot2", "patchwork"))
