@@ -9,9 +9,12 @@ output:
     code_folding: "hide"
 ---
 
-```{r setup, message=FALSE}
+```{r setup, include=FALSE}
 
 knitr::opts_chunk$set(message = FALSE)
+```
+
+```{r load-packages, message=FALSE}
 
 # load required packages
 # install them, if not already present, with the following command:
@@ -23,6 +26,9 @@ library(dendextend)
 library(cluster)
 library(usedist)
 library(patchwork)
+library(ggdendro)
+library(clusteval)
+
 ```
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sschmutz/optimization-method-project-2020/master?urlpath=rstudio)
@@ -184,84 +190,145 @@ The Linkage criteria determines the distance of two clusters. There are multiple
 Depending on the type of data at hand, a different criteria might be suitable.  
 Some of the criterias are shown below.
 
+<br/><br/>
 
 <div class = "row">
   
 <div class = "col-md-6">
-![Single-linkage](figures/SingleLinkage.png)  
 Single-linkage (minimum distance)
-
+![Single-linkage](figures/SingleLinkage.png)  
+Average-linkage (WPGMA)
 ![Average-linkage](figures/AverageLinkage.png)  
-Average-linkage, (WPGMA)
 </div>
   
 <div class = "col-md-6">
-![Complete-linkage](figures/CompleteLinkage.png)  
 Complete-linkage (maximum distance)
-
-
-
+![Complete-linkage](figures/CompleteLinkage.png)  
+Average-group-linkage (UPGMA)
 ![Average-group-linkage](figures/AverageGroupLinkage.png)  
-Average-group-linkage, (UPGMA)
 </div>
 </div>
 
 Source: Von Sigbert  
 ([wikipedia.org/wiki/Hierarchische_Clusteranalyse](https://de.wikipedia.org/wiki/Hierarchische_Clusteranalyse))
 
-## Result
+## Results
+Using the four different linkage criteria described above, dendrograms can be used to represent the clustering trees.  
+Since in this case it's known that we should get three clusters, the desired number of groups (k=3) was specified.  
+
+To compare the performance of the different clustering methods, the Rand index was calculated for each compared to the known classes.  
+The Rand index (value between 0 and 1) describes how similar two clusterings are, 1 beeing the exact same.
 
 ```{r hierarchical-clustering}
 
+# clustering
 SRA_meta_clust_single <- hclust(SRA_meta_dist, method = "single")
 SRA_meta_clust_complete <- hclust(SRA_meta_dist, method = "complete")
 SRA_meta_clust_WPGMA <- hclust(SRA_meta_dist, method = "mcquitty")
 SRA_meta_clust_UPGMA <- hclust(SRA_meta_dist, method = "average")
 
+
+# clustering performance
+rand_index <- function(df){
+  comembership <- clusteval::comembership_table(df$CLASS, df$cluster)
+  n_11 <- comembership[[1]]
+  n_10 <- comembership[[2]]
+  n_01 <- comembership[[3]]
+  n_00 <- comembership[[4]]
+  
+  R <- (n_11 + n_00)/(n_11 + n_10 + n_01 + n_00)
+  
+  return(format(round(R, digits = 2), nsmall = 2))
+}
+
+SRA_meta_clust_single_3 <-
+  bind_rows(cutree(SRA_meta_clust_single, k = 3)) %>%
+  pivot_longer(everything(), names_to = "SAMPLE_ID", values_to = "cluster") %>%
+  left_join(SRA_meta, by = "SAMPLE_ID") %>%
+  mutate(CLASS = factor(CLASS))
+
+SRA_meta_clust_complete_3 <-
+  bind_rows(cutree(SRA_meta_clust_complete, k = 3)) %>%
+  pivot_longer(everything(), names_to = "SAMPLE_ID", values_to = "cluster") %>%
+  left_join(SRA_meta, by = "SAMPLE_ID") %>%
+  mutate(CLASS = factor(CLASS))
+
+SRA_meta_clust_WPGMA_3 <-
+  bind_rows(cutree(SRA_meta_clust_WPGMA, k = 3)) %>%
+  pivot_longer(everything(), names_to = "SAMPLE_ID", values_to = "cluster") %>%
+  left_join(SRA_meta, by = "SAMPLE_ID") %>%
+  mutate(CLASS = factor(CLASS))
+
+SRA_meta_clust_UPGMA_3 <-
+  bind_rows(cutree(SRA_meta_clust_UPGMA, k = 3)) %>%
+  pivot_longer(everything(), names_to = "SAMPLE_ID", values_to = "cluster") %>%
+  left_join(SRA_meta, by = "SAMPLE_ID") %>%
+  mutate(CLASS = factor(CLASS))
+
+
+# clustering plots
 single <-
   SRA_meta_clust_single %>%
   as.dendrogram %>%
-  set("branches_k_color", k = 3)
+  set("branches_k_color", k = 3) %>%
+  set("labels_cex", 0.4) %>%
+  set("branches_lwd", 0.5) %>%
+  as.ggdend() %>%
+  ggplot() +
+  ylim(-0.5, 1) +
+  theme(axis.text=element_text(size=6)) +
+  labs(title = "Single-linkage (minimum distance)",
+       subtitle = paste("Rand index =", rand_index(SRA_meta_clust_single_3)))
 
 complete <-
   SRA_meta_clust_complete %>%
   as.dendrogram %>%
-  set("branches_k_color", k = 3)
+  set("branches_k_color", k = 3) %>%
+  set("labels_cex", 0.4) %>%
+  set("branches_lwd", 0.5) %>%
+  as.ggdend() %>%
+  ggplot() +
+  ylim(-0.5, 1) +
+  theme(axis.text=element_text(size=6)) +
+  labs(title = "Complete-linkage (maximum distance)",
+       subtitle = paste("Rand index =", rand_index(SRA_meta_clust_complete_3)))
 
 WPGMA <-
   SRA_meta_clust_WPGMA %>%
   as.dendrogram %>%
-  set("branches_k_color", k = 3)
+  set("branches_k_color", k = 3) %>%
+  set("labels_cex", 0.4) %>%
+  set("branches_lwd", 0.5) %>%
+  as.ggdend() %>%
+  ggplot() +
+  ylim(-0.5, 1) +
+  theme(axis.text=element_text(size=6)) +
+  labs(title = "Average-linkage (WPGMA)",
+       subtitle = paste("Rand index =", rand_index(SRA_meta_clust_WPGMA_3)))
 
 UPGMA <-
   SRA_meta_clust_UPGMA %>%
   as.dendrogram %>%
-  set("branches_k_color", k = 3)
+  set("branches_k_color", k = 3) %>%
+  set("labels_cex", 0.4) %>%
+  set("branches_lwd", 0.5) %>%
+  as.ggdend() %>%
+  ggplot() +
+  ylim(-0.5, 1) +
+  theme(axis.text=element_text(size=6)) +
+  labs(title = "Average-group-linkage (UPGMA)",
+       subtitle = paste("Rand index =", rand_index(SRA_meta_clust_UPGMA_3)))
 
-
-plot(single)
-plot(complete)
-plot(WPGMA)
-plot(UPGMA)
-
-SRA_meta_clust_3 <-
-  bind_rows(cutree(SRA_meta_clust_single, k = 3)) %>%
-  pivot_longer(everything(), names_to = "SAMPLE_ID", values_to = "cluster") %>%
-  left_join(SRA_meta_tokens, by = "SAMPLE_ID")
+(single | complete) / (WPGMA | UPGMA)
 
 ```
+
+
+
 
 ## Discussion
 
-```{r summarize-clusters}
 
-keyword_summary <- 
-  SRA_meta_clust_3 %>%
-  group_by(cluster) %>%
-  count(keyword, sort = TRUE) %>%
-  arrange(cluster)
-
-```
 
 
 
