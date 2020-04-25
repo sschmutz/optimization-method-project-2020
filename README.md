@@ -1,10 +1,10 @@
 # Keyword Clustering
 > implementing an optimisation method
 
-[![Netlify Status](https://api.netlify.com/api/v1/badges/6244650b-6a5f-400e-9d84-b93250102209/deploy-status)](https://app.netlify.com/sites/keyword-clust/deploys) 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/6244650b-6a5f-400e-9d84-b93250102209/deploy-status)](https://keyword-clust.netlify.app) 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sschmutz/optimization-method-project-2020/master?urlpath=rstudio)
 
-The R code was written in a [R Markdown document](https://github.com/sschmutz/optimization-method-project-2020/blob/master/keyword_hclust.Rmd) and compiled into HTML which should make it simple to follow it without the need of executing it yourself.  
+The R code was written in a [R Markdown document](https://github.com/sschmutz/optimization-method-project-2020/blob/master/keyword_hclust.Rmd), compiled into HTML and deployed on Netlify which should make it simple to follow it without the need of executing it yourself.  
 If this is however preferred, following section lists two options to reproduce the results.
 
 
